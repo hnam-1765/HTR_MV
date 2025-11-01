@@ -110,8 +110,6 @@ def main():
     writer = SummaryWriter(args.save_dir)
 
     wandb.login(key="ed105d007421b1bb62cf29a2ec6a9a6998876a29")
-
-    # Khởi tạo project và tên run
     wandb.init(
         project="HTR_backbone",
         name= args.exp_name,
