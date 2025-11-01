@@ -13,7 +13,7 @@ import numpy as np
 import torch
 from torch import Tensor, nn
 from torch.nn import functional as F
-from .layer import ConvLayer2d
+from .layer import ConvLayer2d, PosCNN
 from timm.models.vision_transformer import Mlp, DropPath
 
 from typing import Any
@@ -175,7 +175,7 @@ class MobileViTBlock(BaseModule):
         self.local_rep = nn.Sequential()
         self.local_rep.add_module(name="conv_3x3", module=conv_3x3_in)
         self.local_rep.add_module(name="conv_1x1", module=conv_1x1_in)
-
+        self.pos_pe = PosCNN(in_chans=transformer_dim, embed_dim=transformer_dim)
         assert transformer_dim % head_dim == 0
         num_heads = transformer_dim // head_dim
  
@@ -304,11 +304,14 @@ class MobileViTBlock(BaseModule):
 
         # convert feature map to patches
         patches, info_dict = self.unfolding(fm)
-
+        num_patch_h = info_dict["num_patches_h"]
+        num_patch_w = info_dict["num_patches_w"]
         # learn global representations
-        for transformer_layer in self.global_rep:
+       
+        for j, transformer_layer in enumerate(self.global_rep):
             patches = transformer_layer(patches)
-
+            if j == 0:
+                patches  = self.pos_pe(x, num_patch_h, num_patch_w)  # PEG here
         # [B x Patch x Patches x C] --> [B x C x Patches x Patch]
         fm = self.folding(patches=patches, info_dict=info_dict)
 
